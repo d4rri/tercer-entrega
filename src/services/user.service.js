@@ -1,9 +1,12 @@
-import { UserManager } from "../dbOperations/index.js";
+import {getApiDao} from "../model/index.js";
+import {options} from "../config/config.js";
 
-export const getUsers = async ()=>{
-    return await UserManager.getAll();
-}
+const {UserDaoContainer,ProductDaoContainer} = await getApiDao(options.server.dbType);
+
+export const getUsers = async()=>{
+    return await UserDaoContainer.getAll();
+};
 
 export const saveUser = async(body)=>{
-    return await UserManager.save(body)
-}
+    return await UserDaoContainer.save(body);
+};

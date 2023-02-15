@@ -1,10 +1,9 @@
 import express from "express";
-import {UserRouter} from "./api/user.routes.js";
-import { ProductRouter } from "./api/product.routes.js";
+import * as UserController from "../controllers/user.controller.js";
 
 const router = express.Router();
 
-router.use("/users",UserRouter);
-router.use("/products",ProductRouter);
+router.get("/users",UserController.getUsersController);
+router.post("/user",UserController.saveUserController);
 
 export {router as apiRouter};
