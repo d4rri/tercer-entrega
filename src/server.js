@@ -1,41 +1,72 @@
 import express from "express";
-import session from "express-session";
-import MongoStore from "connect-mongo";
-import passport from "passport";
-
-import { logger } from "./loggers/logger.js";
-import {options} from "./config/databaseConfig.js";
-import { cartsRouter } from "./routes/carritos.js";
-import { productsRouter } from "./routes/products.js";
-import {authRouter} from "./routes/auth.js";
+import {buildSchema} from "graphql";
+import {graphqlHTTP} from "express-graphql";
 
 const app = express();
-
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(express.static('public'));
+app.use(express.urlencoded({extended:true}));
 
-app.use(session({
-    store: MongoStore.create({
-        mongoUrl:options.mongoDB.url
-    }),
-    secret:"claveSecreta",
-    resave:false,
-    saveUninitialized:false
+const PORT = process.env.PORT || 8080;
+app.listen(PORT,()=>console.log(`Server listening on port ${PORT}`));
+
+const User=`
+type User{
+    id:Int,
+    nombre:String,
+    telefono:String
+},`
+
+const graphqlSchema = buildSchema(`
+    ${User},
+    input UserInput{
+        nombre:String,
+        telefono:String
+    }
+    type Query{
+        getUsers: [User],
+        getUserById(id:Int): User
+    }
+    type Mutation{
+        addUser(user:UserInput): User
+    }
+`);
+
+
+let users = [];
+const root ={
+    getUsers:()=>{
+        return users
+    },
+
+    getUserById:({id})=>{
+        const userFound = users.find(u=>u.id === id);
+        if(!userFound){
+            return null
+        } else {
+            return userFound
+        }
+    },
+
+    addUser:({user})=>{
+        let newId;
+        if(!users.length){
+            newId=1
+        } else {
+            newId = users[users.length-1].id + 1
+        }
+        const newUser = {
+            id:newId,
+            nombre:user.nombre,
+            telefono:user.telefono
+        }
+        users.push(newUser);
+        return newUser;
+    }
+};
+
+
+app.use("/graphql",graphqlHTTP({
+    schema:graphqlSchema,
+    rootValue:root, 
+    graphiql:true 
 }));
-
-
-app.use(passport.initialize());
-app.use(passport.session());
-
-
-app.use("/api/auth", authRouter);
-app.use('/api/productos', productsRouter);
-app.use('/api/carritos', cartsRouter);
-
-
-const PORT = 8080;
-const server = app.listen(PORT, () => {
-    logger.info(`Server listening on port ${PORT}`);
-})
-server.on('error', error => logger.fatal(`Error in server ${error}`));
